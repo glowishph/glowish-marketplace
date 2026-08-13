@@ -28,6 +28,10 @@ export const patchAppSettingsSchema = z.object({
     .optional()
     .transform((v) => (v === "" || v === null ? null : v)),
   purchaseOrderDiscountByOrgType: purchaseOrderDiscountByOrgTypeSchema.optional(),
+  impactEnabled: z.boolean().optional(),
+  impactImageUrl: z.union([z.string().max(2048), z.literal("")]).optional(),
+  impactTitle: z.string().max(120).optional(),
+  impactContent: z.string().max(500).optional(),
 });
 
 export type PatchAppSettingsInput = z.infer<typeof patchAppSettingsSchema>;

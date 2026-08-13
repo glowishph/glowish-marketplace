@@ -34,6 +34,10 @@ export function getBrandingFolder(): string {
   return `${getUploadRootFolder()}/branding`;
 }
 
+export function getImpactFolder(): string {
+  return `${getUploadRootFolder()}/impact`;
+}
+
 export function getAdsCreativeFolder(): string {
   return `${getUploadRootFolder()}/ads/creative`;
 }

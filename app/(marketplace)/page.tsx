@@ -6,6 +6,7 @@ import {
   listMarketplaceAds,
 } from "@/lib/services/marketplace.service";
 import { getFeaturedPromo } from "@/lib/services/coupon.service";
+import { getPublicAppSettings } from "@/lib/services/appSettings.service";
 import { PRODUCT_CATEGORIES } from "@/lib/products/catalog";
 
 export const metadata: Metadata = {
@@ -21,12 +22,13 @@ export const metadata: Metadata = {
 };
 
 export default async function MarketplaceHomePage() {
-  const [productsResult, samplesResult, adsResult, promoResult, ...categoryResults] =
+  const [productsResult, samplesResult, adsResult, promoResult, appSettingsResult, ...categoryResults] =
     await Promise.allSettled([
       listMarketplaceProducts({ page: 1, limit: 12 }),
       getMarketplaceCategoryShowcase(),
       listMarketplaceAds(),
       getFeaturedPromo(),
+      getPublicAppSettings(),
       ...PRODUCT_CATEGORIES.map((c) =>
         listMarketplaceProducts({ page: 1, limit: 3, category: c.value })
       ),
@@ -45,6 +47,7 @@ export default async function MarketplaceHomePage() {
     samplesResult.status === "fulfilled" ? samplesResult.value : null;
   const ads = adsResult.status === "fulfilled" ? adsResult.value : [];
   const promo = promoResult.status === "fulfilled" ? promoResult.value : null;
+  const appSettings = appSettingsResult.status === "fulfilled" ? appSettingsResult.value : null;
 
   const categoryProducts = Object.fromEntries(
     PRODUCT_CATEGORIES.map((c, i) => [
@@ -61,6 +64,10 @@ export default async function MarketplaceHomePage() {
       initialAds={ads}
       initialCategoryProducts={categoryProducts}
       initialPromo={promo}
+      impactEnabled={appSettings?.impactEnabled ?? true}
+      impactImageUrl={appSettings?.impactImageUrl}
+      impactTitle={appSettings?.impactTitle}
+      impactContent={appSettings?.impactContent}
     />
   );
 }

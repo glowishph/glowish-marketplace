@@ -20,6 +20,10 @@ const baseSettings: PublicAppSettings = {
     headquarters: 0,
   },
   imageUploadEnabled: false,
+  impactEnabled: true,
+  impactImageUrl: "",
+  impactTitle: "Your glow gives back",
+  impactContent: "Every order supports the Wise Foundation.",
 };
 
 describe("getSiteUrl", () => {

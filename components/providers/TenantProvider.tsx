@@ -18,6 +18,11 @@ export const DEFAULT_PUBLIC_APP_SETTINGS: PublicAppSettings = {
   receiptFooter: "",
   purchaseOrderDiscountByOrgType: { ...DEFAULT_PURCHASE_ORDER_DISCOUNT_BY_ORG_TYPE },
   imageUploadEnabled: true,
+  impactEnabled: true,
+  impactImageUrl: "",
+  impactTitle: "Your glow gives back",
+  impactContent:
+    "Every order supports the Wise Foundation. Each time you treat yourself, you help brighten someone else's day too — thank you for glowing with purpose.",
 };
 
 const TenantContext = createContext<PublicAppSettings>(DEFAULT_PUBLIC_APP_SETTINGS);

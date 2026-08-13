@@ -28,6 +28,7 @@ import {
   Trash2,
   WrenchIcon,
   Search,
+  HeartHandshake,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { AppLogo } from "@/components/branding/AppLogo";
@@ -278,6 +279,9 @@ export default function SettingsPage() {
     purchaseOrderDiscountByOrgType: {
       ...DEFAULT_PURCHASE_ORDER_DISCOUNT_BY_ORG_TYPE,
     } as PurchaseOrderDiscountByOrgType,
+    impactEnabled: true,
+    impactTitle: "",
+    impactContent: "",
   });
   const [spinWheelGiftProductName, setSpinWheelGiftProductName] = useState("");
   const [spinWheelGiftSearch, setSpinWheelGiftSearch] = useState("");
@@ -305,6 +309,9 @@ export default function SettingsPage() {
           ...DEFAULT_PURCHASE_ORDER_DISCOUNT_BY_ORG_TYPE,
           ...appSettings.purchaseOrderDiscountByOrgType,
         },
+        impactEnabled: appSettings.impactEnabled ?? true,
+        impactTitle: appSettings.impactTitle ?? "",
+        impactContent: appSettings.impactContent ?? "",
       });
     });
   }, [appSettings]);
@@ -363,6 +370,9 @@ export default function SettingsPage() {
           marketplaceFulfillmentBranchId: appForm.marketplaceFulfillmentBranchId || "",
           spinWheelFreeGiftProductId: appForm.spinWheelFreeGiftProductId || "",
           purchaseOrderDiscountByOrgType: appForm.purchaseOrderDiscountByOrgType,
+          impactEnabled: appForm.impactEnabled,
+          impactTitle: appForm.impactTitle.trim(),
+          impactContent: appForm.impactContent.trim(),
         }),
       });
       const data = await res.json();
@@ -423,6 +433,71 @@ export default function SettingsPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [logoPickerOpen, setLogoPickerOpen] = useState(false);
   const [ogImagePickerOpen, setOgImagePickerOpen] = useState(false);
+  const impactImageInputRef = useRef<HTMLInputElement>(null);
+  const [impactImagePickerOpen, setImpactImagePickerOpen] = useState(false);
+
+  const impactImageUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/settings/app/impact-image", { method: "POST", body: form });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? "Image upload failed");
+      return data.data as AdminAppSettings;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["app-settings"], {
+        ...data,
+        marketplaceFulfillmentBranchId: data.marketplaceFulfillmentBranchId ?? "",
+      });
+      toast({ title: "Impact block image updated" });
+      queryClient.invalidateQueries({ queryKey: ["app-settings"] });
+      router.refresh();
+    },
+    onError: (err: Error) => toast({ title: err.message, variant: "destructive" }),
+  });
+
+  const impactImageFromLibraryMutation = useMutation({
+    mutationFn: async (url: string) => {
+      const res = await fetch("/api/settings/app", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ impactImageUrl: url }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? "Could not set image");
+      return data.data as AdminAppSettings;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["app-settings"], {
+        ...data,
+        marketplaceFulfillmentBranchId: data.marketplaceFulfillmentBranchId ?? "",
+      });
+      toast({ title: "Impact block image updated from media library" });
+      queryClient.invalidateQueries({ queryKey: ["app-settings"] });
+      router.refresh();
+    },
+    onError: (err: Error) => toast({ title: err.message, variant: "destructive" }),
+  });
+
+  const impactImageRemoveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/settings/app/impact-image", { method: "DELETE" });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? "Could not remove image");
+      return data.data as AdminAppSettings;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["app-settings"], {
+        ...data,
+        marketplaceFulfillmentBranchId: data.marketplaceFulfillmentBranchId ?? "",
+      });
+      toast({ title: "Impact block image reset to default" });
+      queryClient.invalidateQueries({ queryKey: ["app-settings"] });
+      router.refresh();
+    },
+    onError: (err: Error) => toast({ title: err.message, variant: "destructive" }),
+  });
 
   const logoUploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -989,6 +1064,176 @@ export default function SettingsPage() {
                       Test connection
                     </Button>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <HeartHandshake className="h-4 w-4" />
+                    Impact block
+                  </CardTitle>
+                  <CardDescription>
+                    The charity/foundation callout shown on the storefront home page sidebar.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {appSettingsLoading ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium">Show impact block</p>
+                          <p className="text-xs text-muted-foreground">
+                            {appForm.impactEnabled
+                              ? "Currently visible on the storefront home page."
+                              : "Currently hidden from the storefront home page."}
+                          </p>
+                        </div>
+                        <Checkbox
+                          checked={appForm.impactEnabled}
+                          onCheckedChange={(v) =>
+                            setAppForm((f) => ({ ...f, impactEnabled: v === true }))
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Image</Label>
+                        <div className="flex flex-wrap items-center gap-4">
+                          <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border bg-white shadow-sm">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={appSettings?.impactImageUrl?.trim() || "/wise.jpg"}
+                              alt="Impact block preview"
+                              className="h-full w-full object-contain"
+                            />
+                          </span>
+                          <div className="flex flex-col gap-2">
+                            <input
+                              ref={impactImageInputRef}
+                              type="file"
+                              accept={IMAGE_UPLOAD_ACCEPT}
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                e.target.value = "";
+                                if (file) impactImageUploadMutation.mutate(file);
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={
+                                !appSettings?.imageUploadEnabled ||
+                                impactImageUploadMutation.isPending ||
+                                impactImageFromLibraryMutation.isPending ||
+                                impactImageRemoveMutation.isPending
+                              }
+                              onClick={() => impactImageInputRef.current?.click()}
+                            >
+                              {impactImageUploadMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Upload className="h-4 w-4 mr-2" />
+                              )}
+                              Upload image
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={
+                                impactImageUploadMutation.isPending ||
+                                impactImageFromLibraryMutation.isPending ||
+                                impactImageRemoveMutation.isPending
+                              }
+                              onClick={() => setImpactImagePickerOpen(true)}
+                            >
+                              {impactImageFromLibraryMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Images className="h-4 w-4 mr-2" />
+                              )}
+                              Media library
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={
+                                impactImageUploadMutation.isPending ||
+                                impactImageFromLibraryMutation.isPending ||
+                                impactImageRemoveMutation.isPending ||
+                                !appSettings?.impactImageUrl?.trim()
+                              }
+                              onClick={() => impactImageRemoveMutation.mutate()}
+                            >
+                              {impactImageRemoveMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4 mr-2" />
+                              )}
+                              Use default image
+                            </Button>
+                            {!appSettings?.imageUploadEnabled ? (
+                              <p className="text-xs text-destructive max-w-xs">
+                                Image upload is not configured. Set up Cloudinary or local uploads
+                                first.
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <MediaPickerDialog
+                          open={impactImagePickerOpen}
+                          onOpenChange={setImpactImagePickerOpen}
+                          selectedUrls={[]}
+                          maxPick={1}
+                          title="Choose impact block image"
+                          confirmLabel="Use image"
+                          emptyMessage="No media yet. Upload images on the Media page, then return here."
+                          onConfirm={(urls) => {
+                            const url = urls[0]?.trim();
+                            if (url) impactImageFromLibraryMutation.mutate(url);
+                          }}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="impactTitle">Heading</Label>
+                        <Input
+                          id="impactTitle"
+                          value={appForm.impactTitle}
+                          onChange={(e) => setAppForm((f) => ({ ...f, impactTitle: e.target.value }))}
+                          placeholder="Your glow gives back"
+                          maxLength={120}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="impactContent">Body copy</Label>
+                        <textarea
+                          id="impactContent"
+                          value={appForm.impactContent}
+                          onChange={(e) =>
+                            setAppForm((f) => ({ ...f, impactContent: e.target.value }))
+                          }
+                          placeholder="Every order supports the Wise Foundation..."
+                          rows={3}
+                          maxLength={500}
+                          className={cn(
+                            "flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm",
+                            "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                            "disabled:cursor-not-allowed disabled:opacity-50"
+                          )}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {appForm.impactContent.length}/500
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 

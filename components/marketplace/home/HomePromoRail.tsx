@@ -23,6 +23,10 @@ const TRUST_CARDS = [
 type HomePromoRailProps = {
   imageUrl?: string | null;
   promo?: FeaturedPromo | null;
+  impactEnabled?: boolean;
+  impactImageUrl?: string | null;
+  impactTitle?: string | null;
+  impactContent?: string | null;
 };
 
 function promoHeadline(promo?: FeaturedPromo | null): string {
@@ -38,26 +42,36 @@ function promoCategoryLabel(promo?: FeaturedPromo | null): string | null {
   return PRODUCT_CATEGORIES.find((c) => c.value === promo.category)?.label ?? null;
 }
 
-export function HomePromoRail({ imageUrl, promo }: HomePromoRailProps) {
+export function HomePromoRail({
+  imageUrl,
+  promo,
+  impactEnabled = true,
+  impactImageUrl,
+  impactTitle,
+  impactContent,
+}: HomePromoRailProps) {
   return (
     <aside className="hidden flex-col gap-4 xl:flex" aria-label="Offers and store guarantees">
-      <div className="rounded-[10px] border border-[#e6f1d8] bg-[#f3f9ec] p-5 text-center">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm">
-          <Image
-            src="/wise.jpg"
-            alt="WISE Foundation — Women In the Service for Everyone"
-            width={56}
-            height={56}
-            className="h-full w-full object-contain"
-          />
-        </span>
-        <p className="mt-3 text-sm font-semibold text-[#1f2a44]">Your glow gives back</p>
-        <p className="mt-1.5 text-xs leading-5 text-[#64748b]">
-          Every order supports the <span className="font-semibold text-[#477d34]">Wise Foundation</span>.
-          Each time you treat yourself, you help brighten someone else&rsquo;s day too — thank you
-          for glowing with purpose.
-        </p>
-      </div>
+      {impactEnabled ? (
+        <div className="rounded-[10px] border border-[#e6f1d8] bg-[#f3f9ec] p-5 text-center">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm">
+            <Image
+              src={impactImageUrl?.trim() || "/wise.jpg"}
+              alt="WISE Foundation — Women In the Service for Everyone"
+              width={56}
+              height={56}
+              className="h-full w-full object-contain"
+            />
+          </span>
+          <p className="mt-3 text-sm font-semibold text-[#1f2a44]">
+            {impactTitle?.trim() || "Your glow gives back"}
+          </p>
+          <p className="mt-1.5 text-xs leading-5 text-[#64748b]">
+            {impactContent?.trim() ||
+              "Every order supports the Wise Foundation. Each time you treat yourself, you help brighten someone else's day too — thank you for glowing with purpose."}
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-3 rounded-[10px] border border-[#dde8d4] bg-white p-4 shadow-[0_2px_12px_rgba(70,90,58,0.06)]">
         {TRUST_CARDS.map((card) => (

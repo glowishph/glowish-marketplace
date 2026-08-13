@@ -65,6 +65,11 @@ export default async function DashboardLayout({ children }: Props) {
       receiptFooter: "",
       purchaseOrderDiscountByOrgType: { ...DEFAULT_PURCHASE_ORDER_DISCOUNT_BY_ORG_TYPE },
       imageUploadEnabled: false,
+      impactEnabled: true,
+      impactImageUrl: "",
+      impactTitle: "Your glow gives back",
+      impactContent:
+        "Every order supports the Wise Foundation. Each time you treat yourself, you help brighten someone else's day too — thank you for glowing with purpose.",
     };
   }
 

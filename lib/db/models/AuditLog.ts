@@ -42,6 +42,8 @@ export type AuditAction =
   | "member.created"
   | "settings.logo_updated"
   | "settings.logo_removed"
+  | "settings.impact_image_updated"
+  | "settings.impact_image_removed"
   | "settings.maintenance_toggled"
   | "settings.roles_synced"
   | "user.2fa_enabled"

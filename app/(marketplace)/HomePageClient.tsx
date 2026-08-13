@@ -74,6 +74,10 @@ type HomePageClientProps = {
   initialAds: MarketplaceAd[];
   initialCategoryProducts: Partial<Record<ProductCategory, Row[]>>;
   initialPromo: FeaturedPromo | null;
+  impactEnabled?: boolean;
+  impactImageUrl?: string | null;
+  impactTitle?: string | null;
+  impactContent?: string | null;
 };
 
 export function HomePageClient({
@@ -83,6 +87,10 @@ export function HomePageClient({
   initialAds,
   initialCategoryProducts,
   initialPromo,
+  impactEnabled,
+  impactImageUrl,
+  impactTitle,
+  impactContent,
 }: HomePageClientProps) {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -431,6 +439,10 @@ export function HomePageClient({
               categorySamples ? pickCategoryProductImage(categorySamples, "cosmetics") : null
             }
             promo={initialPromo}
+            impactEnabled={impactEnabled}
+            impactImageUrl={impactImageUrl}
+            impactTitle={impactTitle}
+            impactContent={impactContent}
           />
         </div>
       </section>

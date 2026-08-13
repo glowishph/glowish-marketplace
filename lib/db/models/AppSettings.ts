@@ -28,6 +28,14 @@ export interface IAppSettings extends Document {
   purchaseOrderDiscountByOrgType: PurchaseOrderDiscountByOrgType;
   /** Product awarded as the "Free Perfume" spin-wheel prize. Unset = that prize is excluded. */
   spinWheelFreeGiftProductId?: Types.ObjectId | null;
+  /** Shows the "impact" block (e.g. charity/foundation callout) on the storefront home page. */
+  impactEnabled: boolean;
+  /** Impact block image URL (Cloudinary or /uploads). Empty uses the bundled default. */
+  impactImageUrl: string;
+  /** Impact block heading. */
+  impactTitle: string;
+  /** Impact block body copy. */
+  impactContent: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,6 +70,15 @@ const AppSettingsSchema = new Schema<IAppSettings>(
     defaultLowStockThreshold: { type: Number, default: 10, min: 1 },
     receiptFooter: { type: String, default: "" },
     spinWheelFreeGiftProductId: { type: Schema.Types.ObjectId, ref: "Product", default: null },
+    impactEnabled: { type: Boolean, default: true },
+    impactImageUrl: { type: String, default: "" },
+    impactTitle: { type: String, default: "Your glow gives back", maxlength: 120 },
+    impactContent: {
+      type: String,
+      default:
+        "Every order supports the Wise Foundation. Each time you treat yourself, you help brighten someone else's day too — thank you for glowing with purpose.",
+      maxlength: 500,
+    },
     purchaseOrderDiscountByOrgType: {
       type: purchaseOrderDiscountByOrgTypeSchema,
       default: () => ({

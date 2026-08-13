@@ -6,6 +6,7 @@ import type { PublicAppSettings } from "@/lib/types/appSettings";
 import type { PatchAppSettingsInput } from "@/lib/validations/appSettings.schema";
 import { imageUploadConfigured } from "@/lib/server/imageStorage";
 import { maybeRemoveReplacedAppLogo } from "@/lib/services/appLogo.service";
+import { maybeRemoveReplacedImpactImage } from "@/lib/services/appImpact.service";
 import { writeAuditLog, type AuditActor } from "@/lib/services/audit.service";
 import {
   DEFAULT_PURCHASE_ORDER_DISCOUNT_BY_ORG_TYPE,
@@ -26,6 +27,11 @@ const DEFAULTS: PublicAppSettings = {
   receiptFooter: "",
   purchaseOrderDiscountByOrgType: { ...DEFAULT_PURCHASE_ORDER_DISCOUNT_BY_ORG_TYPE },
   imageUploadEnabled: false,
+  impactEnabled: true,
+  impactImageUrl: "",
+  impactTitle: "Your glow gives back",
+  impactContent:
+    "Every order supports the Wise Foundation. Each time you treat yourself, you help brighten someone else's day too — thank you for glowing with purpose.",
 };
 
 export function toPublicAppSettings(
@@ -43,6 +49,10 @@ export function toPublicAppSettings(
     purchaseOrderDiscountByOrgType?: Partial<
       PublicAppSettings["purchaseOrderDiscountByOrgType"]
     >;
+    impactEnabled?: boolean;
+    impactImageUrl?: string;
+    impactTitle?: string;
+    impactContent?: string;
   } | null
 ): PublicAppSettings {
   if (!doc) return { ...DEFAULTS, imageUploadEnabled: imageUploadConfigured() };
@@ -62,6 +72,10 @@ export function toPublicAppSettings(
       doc.purchaseOrderDiscountByOrgType
     ),
     imageUploadEnabled: imageUploadConfigured(),
+    impactEnabled: doc.impactEnabled ?? DEFAULTS.impactEnabled,
+    impactImageUrl: doc.impactImageUrl?.trim() ?? DEFAULTS.impactImageUrl,
+    impactTitle: doc.impactTitle ?? DEFAULTS.impactTitle,
+    impactContent: doc.impactContent ?? DEFAULTS.impactContent,
   };
 }
 
@@ -127,6 +141,15 @@ export async function updateAppSettings(updates: PatchAppSettingsInput, actor?: 
 
   if (rest.seoDefaultDescription !== undefined) {
     set.seoDefaultDescription = String(rest.seoDefaultDescription).trim();
+  }
+
+  if (rest.impactImageUrl !== undefined) {
+    const next = String(rest.impactImageUrl).trim();
+    const prev = existing.impactImageUrl?.trim() ?? "";
+    if (prev && prev !== next) {
+      await maybeRemoveReplacedImpactImage(prev);
+    }
+    set.impactImageUrl = next;
   }
 
   if (purchaseOrderDiscountByOrgType !== undefined) {

@@ -19,6 +19,14 @@ export interface PublicAppSettings {
   purchaseOrderDiscountByOrgType: PurchaseOrderDiscountByOrgType;
   /** From server at request time; product image upload requires a writable upload directory when false. */
   imageUploadEnabled: boolean;
+  /** Shows the "impact" block (e.g. charity/foundation callout) on the storefront home page. */
+  impactEnabled: boolean;
+  /** Impact block image URL; empty uses the bundled default. */
+  impactImageUrl: string;
+  /** Impact block heading. */
+  impactTitle: string;
+  /** Impact block body copy. */
+  impactContent: string;
 }
 
 /** Admin-only fields from GET /api/settings/app */
