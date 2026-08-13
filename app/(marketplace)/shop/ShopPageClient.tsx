@@ -117,6 +117,36 @@ export function ShopPageClient() {
   const [facets, setFacets] = useState<ShopFacets | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [featuredHero, setFeaturedHero] = useState<Row[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/marketplace/featured-products?placement=shop");
+        const json = await res.json();
+        if (cancelled || !json.success) return;
+        const items: { id: string; name: string; slug: string; image: string; price: number }[] =
+          json.data ?? [];
+        setFeaturedHero(
+          items.map((p) => ({
+            _id: p.id,
+            name: p.name,
+            slug: p.slug,
+            images: [p.image],
+            retailPrice: p.price,
+            category: "",
+            stock: 1,
+          }))
+        );
+      } catch {
+        /* keep the existing rows-based hero fallback */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [priceMinApplied, setPriceMinApplied] = useState<number | undefined>(undefined);
   const [priceMaxApplied, setPriceMaxApplied] = useState<number | undefined>(undefined);
   const [priceMinDraft, setPriceMinDraft] = useState("");
@@ -220,7 +250,8 @@ export function ShopPageClient() {
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
   const showingStart = total === 0 ? 0 : (page - 1) * LIMIT + 1;
   const showingEnd = Math.min(page * LIMIT, total);
-  const heroProducts = rows.slice(0, 3);
+  const heroProducts =
+    featuredHero && featuredHero.length >= 3 ? featuredHero.slice(0, 3) : rows.slice(0, 3);
   const productIds = useMemo(() => rows.map((r) => r._id), [rows]);
   const { summaries: reviewSummaries } = useProductReviewSummaries(productIds);
 

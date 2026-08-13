@@ -7,6 +7,7 @@ import { getCustomerDashboard } from "@/lib/services/customerDashboard.service";
 import { validateCoupon } from "@/lib/services/coupon.service";
 import { AppSettings } from "@/lib/db/models/AppSettings";
 import { Branch } from "@/lib/db/models/Branch";
+import { marketplaceListedMatch as listedFilter } from "@/lib/services/marketplaceShopFilters";
 import type { MarketplaceCheckoutInput } from "@/lib/validations/marketplace.schema";
 import { phpAmountToCentavos } from "@/lib/paymongo/config";
 import {
@@ -16,12 +17,6 @@ import {
   getMarketplaceShippingOption,
   MARKETPLACE_SHIPPING_METHODS,
 } from "@/lib/utils/marketplaceShipping";
-
-const listedFilter: Record<string, unknown> = {
-  deletedAt: null,
-  isActive: true,
-  $or: [{ marketplaceListed: true }, { marketplaceListed: { $exists: false } }],
-};
 
 export type MarketplaceCheckoutQuote = {
   subtotal: number;

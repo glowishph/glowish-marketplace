@@ -60,6 +60,8 @@ const AdsCarousel = dynamic(
 
 const VALID_CATEGORIES = new Set<ProductCategory>(["homecare", "cosmetics", "wellness", "scent"]);
 
+type FeaturedHeroProduct = { id: string; name: string; slug: string; image: string; price: number };
+
 const CATS: { value: ProductCategory | ""; label: string }[] = [
   { value: "", label: "All categories" },
   ...PRODUCT_CATEGORIES.map((c) => ({ value: c.value, label: c.label })),
@@ -101,10 +103,27 @@ export function HomePageClient({
   const [loading, setLoading] = useState(initialProducts.length === 0);
   const [error, setError] = useState("");
   const [previewAd, setPreviewAd] = useState<MarketplaceAd | null>(null);
+  const [featuredHero, setFeaturedHero] = useState<FeaturedHeroProduct[] | null>(null);
 
   // Skip the first auto-load if the server already provided data
   const skipNextLoad = useRef(initialProducts.length > 0);
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/marketplace/featured-products?placement=home");
+        const json = await res.json();
+        if (!cancelled && json.success) setFeaturedHero(json.data ?? []);
+      } catch {
+        /* keep the existing rows-based hero fallback */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebounced(search.trim()), 350);
@@ -188,18 +207,30 @@ export function HomePageClient({
     return Object.fromEntries(entries) as Partial<Record<ProductCategory, string>>;
   }, [categorySamples]);
 
-  const heroSlots = useMemo<HomeHeroSlot[]>(
-    () =>
-      [0, 1, 2].map((index) => {
-        const product = rows[index];
-        const imageUrl = product
-          ? resolveProductImage(product, index)
-          : heroCategoryImages?.[index] ??
-            MARKETPLACE_PRODUCT_STOCK[index % MARKETPLACE_PRODUCT_STOCK.length];
-        return { product, imageUrl };
-      }),
-    [rows, resolveProductImage, heroCategoryImages]
-  );
+  const heroSlots = useMemo<HomeHeroSlot[]>(() => {
+    if (featuredHero && featuredHero.length >= 3) {
+      return featuredHero.slice(0, 3).map((p) => ({
+        product: {
+          _id: p.id,
+          name: p.name,
+          slug: p.slug,
+          images: [p.image],
+          retailPrice: p.price,
+          category: "",
+          stock: 1,
+        },
+        imageUrl: p.image,
+      }));
+    }
+    return [0, 1, 2].map((index) => {
+      const product = rows[index];
+      const imageUrl = product
+        ? resolveProductImage(product, index)
+        : heroCategoryImages?.[index] ??
+          MARKETPLACE_PRODUCT_STOCK[index % MARKETPLACE_PRODUCT_STOCK.length];
+      return { product, imageUrl };
+    });
+  }, [featuredHero, rows, resolveProductImage, heroCategoryImages]);
 
   type MergedItem = { kind: "product"; row: Row } | { kind: "sponsored"; ad: MarketplaceAd };
   const mergedRows = useMemo<MergedItem[]>(() => {

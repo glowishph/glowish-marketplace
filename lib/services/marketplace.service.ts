@@ -27,6 +27,7 @@ import {
   normalizeShopTags,
   type MarketplaceShopListParams,
 } from "@/lib/services/marketplaceShopFilters";
+import { getFeaturedProductSelectionLean } from "@/lib/services/featuredProducts.service";
 import { getCustomerDashboard } from "@/lib/services/customerDashboard.service";
 import { validateCoupon, redeemCoupon } from "@/lib/services/coupon.service";
 import {
@@ -325,6 +326,33 @@ const _cachedCategoryShowcase = unstable_cache(
     };
   }
 
+  const selection = await getFeaturedProductSelectionLean();
+  const overrideIds = selection
+    ? Object.values(selection.categoryFeatured ?? {}).filter(Boolean)
+    : [];
+  if (overrideIds.length > 0) {
+    const overrideDocs = await Product.find({
+      _id: { $in: overrideIds },
+      ...marketplaceListedMatch,
+      images: { $exists: true, $type: "array", $ne: [] },
+    })
+      .select("name slug images")
+      .lean();
+    const overrideById = new Map(overrideDocs.map((d) => [String(d._id), d]));
+    for (const category of Object.keys(selection!.categoryFeatured ?? {}) as ProductCategory[]) {
+      const productId = selection!.categoryFeatured?.[category];
+      const doc = productId ? overrideById.get(String(productId)) : undefined;
+      if (doc?.images?.[0]) {
+        featured[category] = {
+          productId: String(doc._id),
+          name: doc.name as string,
+          slug: doc.slug as string,
+          image: doc.images[0] as string,
+        };
+      }
+    }
+  }
+
   const catalogDoc = await Product.findOne({
     ...marketplaceListedMatch,
     images: { $exists: true, $type: "array", $ne: [] },
@@ -541,7 +569,7 @@ export async function listMarketplaceAds(limit = 8): Promise<MarketplaceAd[]> {
   })
     .sort({ sortOrder: 1, createdAt: -1 })
     .limit(limit)
-    .populate("productId", "name slug images retailPrice")
+    .populate({ path: "productId", match: marketplaceListedMatch, select: "name slug images retailPrice" })
     .lean();
 
   return ads

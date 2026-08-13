@@ -50,7 +50,7 @@ const ProductSchema = new Schema<IProduct>(
     retailPrice: { type: Number, required: true, min: 0 },
     isActive: { type: Boolean, default: true },
     tags: [{ type: String }],
-    marketplaceListed: { type: Boolean, default: true },
+    marketplaceListed: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
   },
   { timestamps: true }

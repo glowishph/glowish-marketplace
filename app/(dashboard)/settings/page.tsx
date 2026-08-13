@@ -480,6 +480,19 @@ export default function SettingsPage() {
     onError: (err: Error) => toast({ title: err.message, variant: "destructive" }),
   });
 
+  const featuredProductsRefreshMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/featured-products/refresh", { method: "POST" });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? "Failed to refresh featured products");
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: "Featured banner products refreshed" });
+    },
+    onError: (err: Error) => toast({ title: err.message, variant: "destructive" }),
+  });
+
   const impactImageRemoveMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/settings/app/impact-image", { method: "DELETE" });
@@ -1062,6 +1075,45 @@ export default function SettingsPage() {
                         className={cn("h-4 w-4 mr-2", cloudinaryFetching && "animate-spin")}
                       />
                       Test connection
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    Featured banner products
+                  </CardTitle>
+                  <CardDescription>
+                    The homepage, shop, categories, about us, reviews, resellers, and contact
+                    pages each showcase a random rotating selection of products in their
+                    banners. This runs automatically every Monday — use this to force an
+                    immediate re-shuffle.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">Weekly automatic rotation</p>
+                      <p className="text-xs text-muted-foreground">
+                        Randomly re-picks banner products across the storefront.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={featuredProductsRefreshMutation.isPending}
+                      onClick={() => featuredProductsRefreshMutation.mutate()}
+                    >
+                      {featuredProductsRefreshMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Refresh now
                     </Button>
                   </div>
                 </CardContent>

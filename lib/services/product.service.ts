@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { connectDB } from "@/lib/db/connect";
 import { Product, type IProduct } from "@/lib/db/models/Product";
 import { ProductVariant } from "@/lib/db/models/ProductVariant";
@@ -136,6 +137,7 @@ export async function createProduct(data: CreateProductInput, actor?: AuditActor
 
   const slug = slugify(data.name);
   const product = await Product.create({ ...data, slug });
+  revalidateTag("marketplace-products", "seconds");
 
   if (actor) {
     void writeAuditLog({
@@ -233,6 +235,10 @@ export async function updateProduct(productId: string, data: Partial<IProduct>, 
     { new: true, runValidators: true }
   ).lean();
 
+  if (result) {
+    revalidateTag("marketplace-products", "seconds");
+  }
+
   if (result && actor) {
     void writeAuditLog({
       action: "product.updated",
@@ -261,6 +267,10 @@ export async function deleteProduct(productId: string, actor?: AuditActor) {
     { $set: { deletedAt: new Date(), isActive: false } },
     { new: true }
   ).lean();
+
+  if (result) {
+    revalidateTag("marketplace-products", "seconds");
+  }
 
   if (result && actor) {
     void writeAuditLog({

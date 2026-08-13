@@ -44,6 +44,7 @@ export type AuditAction =
   | "settings.logo_removed"
   | "settings.impact_image_updated"
   | "settings.impact_image_removed"
+  | "marketplace.featured_products_refreshed"
   | "settings.maintenance_toggled"
   | "settings.roles_synced"
   | "user.2fa_enabled"

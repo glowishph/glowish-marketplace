@@ -28,7 +28,7 @@ export const defaultProductFormValues: ProductFormValues = {
   barcode: "",
   retailPrice: 0,
   isActive: true,
-  marketplaceListed: true,
+  marketplaceListed: false,
   tags: "",
   images: [],
   video: "",
