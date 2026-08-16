@@ -30,7 +30,10 @@ const patchHandler = async (req: AuthedRequest) => {
     if (!isValid) return errorResponse("Current password is incorrect");
 
     const hashed = await bcrypt.hash(parsed.data.newPassword, 12);
-    await User.updateOne({ _id: req.user.id }, { $set: { password: hashed } });
+    await User.updateOne(
+      { _id: req.user.id },
+      { $set: { password: hashed }, $inc: { tokenVersion: 1 } }
+    );
 
     void writeAuditLog({
       action: "user.password_changed",

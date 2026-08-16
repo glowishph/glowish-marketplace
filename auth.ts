@@ -22,6 +22,7 @@ declare module "next-auth" {
       posSurface: import("@/lib/organization/capabilities").PosSurface;
     } | null;
     permissions: string[];
+    tokenVersion: number;
   }
   interface Session {
     user: {
@@ -39,6 +40,22 @@ declare module "next-auth" {
       permissions: string[];
       image?: string;
     };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    role?: UserRole;
+    branchIds?: string[];
+    organizationId?: string | null;
+    organizationType?: import("@/types").OrganizationType | null;
+    organizationCapabilities?: {
+      inventorySurface: import("@/lib/organization/capabilities").InventorySurface;
+      posSurface: import("@/lib/organization/capabilities").PosSurface;
+    } | null;
+    permissions?: string[];
+    tokenVersion?: number;
+    invalidated?: boolean;
   }
 }
 
@@ -113,10 +130,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.organizationType = user.organizationType ?? null;
         token.organizationCapabilities = user.organizationCapabilities ?? null;
         token.permissions = user.permissions;
-      } else if (token.sub && !token.role) {
-        // Stale token missing fields — re-hydrate from DB
+        token.tokenVersion = user.tokenVersion;
+      } else if (token.sub) {
+        // Re-check on every request: a password change bumps tokenVersion in the
+        // DB, which invalidates every JWT issued before the change ("logout on
+        // all devices").
         const fresh = await getUserById(token.sub);
-        if (fresh) {
+        if (!fresh || fresh.tokenVersion !== token.tokenVersion) {
+          token.invalidated = true;
+          return token;
+        }
+        if (!token.role) {
+          // Stale token missing fields — re-hydrate from DB
           token.name = fresh.name;
           token.email = fresh.email;
           token.role = fresh.role;
@@ -127,6 +152,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
+      if (token?.invalidated) {
+        return { ...session, user: undefined } as unknown as typeof session;
+      }
       if (token && session.user) {
         const role = token.role as UserRole;
         session.user.id = token.sub!;

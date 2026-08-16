@@ -36,6 +36,7 @@ export async function POST(req: Request) {
       {
         $set: { password: hashed },
         $unset: { passwordResetToken: "", passwordResetExpiry: "" },
+        $inc: { tokenVersion: 1 },
       }
     );
 

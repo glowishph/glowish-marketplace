@@ -36,6 +36,7 @@ export interface IUser extends Document {
   totpBackupCodes?: string[] | null;
   passwordResetToken?: string | null;
   passwordResetExpiry?: Date | null;
+  tokenVersion: number;
   marketplace?: IUserMarketplace;
   marketingOptIn: boolean;
   marketingOptInUpdatedAt?: Date | null;
@@ -143,6 +144,7 @@ const UserSchema = new Schema<IUser>(
     totpBackupCodes: { type: [String], select: false, default: null },
     passwordResetToken: { type: String, select: false, default: null },
     passwordResetExpiry: { type: Date, select: false, default: null },
+    tokenVersion: { type: Number, default: 0 },
     marketplace: { type: MarketplaceSchema, default: () => ({}) },
     marketingOptIn: { type: Boolean, default: true },
     marketingOptInUpdatedAt: { type: Date, default: null },

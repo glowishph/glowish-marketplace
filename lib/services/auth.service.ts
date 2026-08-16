@@ -36,6 +36,7 @@ export type CredentialResult =
         posSurface: PosSurface;
       } | null;
       permissions: string[];
+      tokenVersion: number;
     };
 
 export async function verifyCredentials(
@@ -132,6 +133,7 @@ export async function verifyCredentials(
     organizationType,
     organizationCapabilities,
     permissions,
+    tokenVersion: user.tokenVersion ?? 0,
   };
 }
 
@@ -147,5 +149,6 @@ export async function getUserById(userId: string) {
     branchIds: (user.branchIds as Array<{ toString(): string }> ?? []).map((b) => b.toString()),
     permissions: user.permissions,
     avatar: user.avatar,
+    tokenVersion: user.tokenVersion ?? 0,
   };
 }

@@ -216,6 +216,7 @@ export async function resetOrgAdminPassword(organizationId: string, actor?: Audi
 
   if (existingAdmin) {
     existingAdmin.password = hashedPassword;
+    existingAdmin.tokenVersion = (existingAdmin.tokenVersion ?? 0) + 1;
     await existingAdmin.save();
     if (actor) {
       void writeAuditLog({
