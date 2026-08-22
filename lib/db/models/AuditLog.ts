@@ -53,6 +53,8 @@ export type AuditAction =
   | "user.account_deleted"
   | "user.impersonation_started"
   | "user.impersonation_ended"
+  | "user.permissions_changed"
+  | "role.permissions_updated"
   | "review.created"
   | "review.deleted"
   | "review.featured_changed"

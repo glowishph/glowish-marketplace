@@ -29,6 +29,7 @@ import {
   WrenchIcon,
   Search,
   HeartHandshake,
+  Pencil,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { AppLogo } from "@/components/branding/AppLogo";
@@ -38,6 +39,13 @@ const MediaPickerDialog = dynamic(() =>
 import { resolveAppLogoSrc } from "@/lib/constants/branding";
 import { IMAGE_UPLOAD_ACCEPT } from "@/lib/constants/gallery";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useConfirm } from "@/components/providers/confirm-provider";
 import type { AdminAppSettings } from "@/lib/types/appSettings";
@@ -79,9 +87,17 @@ interface RoleDefinition {
   isSystem?: boolean;
 }
 
+interface PermissionDefinition {
+  key: string;
+  label: string;
+  description: string;
+  group: string;
+}
+
 interface RolesComparePayload {
   codeDefaults: RoleDefinition[];
   database: RoleDefinition[];
+  catalog: PermissionDefinition[];
 }
 
 interface SyncRolesResult {
@@ -238,6 +254,55 @@ export default function SettingsPage() {
       toast({ title: "Sync failed", description: err.message, variant: "destructive" });
     },
   });
+
+  const [editingRole, setEditingRole] = useState<RoleDefinition | null>(null);
+  const [editingPermissions, setEditingPermissions] = useState<string[]>([]);
+
+  function openRoleEditor(role: RoleDefinition, currentPermissions: string[]) {
+    setEditingRole(role);
+    setEditingPermissions([...currentPermissions]);
+  }
+
+  function togglePermission(key: string) {
+    setEditingPermissions((prev) =>
+      prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key]
+    );
+  }
+
+  const updateRolePermissionsMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingRole) throw new Error("No role selected");
+      const res = await fetch(`/api/admin/roles/${editingRole.name}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ permissions: editingPermissions }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error ?? `Failed to update role (${res.status})`);
+      return json.data as { role: string; permissions: string[]; usersUpdated: number };
+    },
+    onSuccess: (result) => {
+      void refetchRoles();
+      setEditingRole(null);
+      toast({
+        title: "Role permissions updated",
+        description: `${result.usersUpdated} user${result.usersUpdated === 1 ? "" : "s"} will need to sign in again to pick up the change.`,
+      });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const permissionsByGroup = useMemo(() => {
+    const groups = new Map<string, PermissionDefinition[]>();
+    for (const p of rolesCompare?.catalog ?? []) {
+      const list = groups.get(p.group) ?? [];
+      list.push(p);
+      groups.set(p.group, list);
+    }
+    return groups;
+  }, [rolesCompare?.catalog]);
 
   const dbRoleByName = useMemo(() => {
     const map = new Map<string, RoleDefinition>();
@@ -1818,12 +1883,14 @@ export default function SettingsPage() {
                               Database
                             </th>
                             <th className="text-right px-3 py-2 font-medium">Status</th>
+                            <th className="text-right px-3 py-2 font-medium" />
                           </tr>
                         </thead>
                         <tbody className="divide-y">
                           {(rolesCompare?.codeDefaults ?? []).map((code) => {
                             const db = dbRoleByName.get(code.name);
                             const inSync = rolePermissionsInSync(code, db);
+                            const isAdminRole = code.name === "ADMIN";
                             return (
                               <tr key={code.name} className="hover:bg-muted/30">
                                 <td className="px-3 py-2.5">
@@ -1840,6 +1907,20 @@ export default function SettingsPage() {
                                   <Badge variant={inSync ? "success" : "warning"}>
                                     {inSync ? "In sync" : db ? "Drift" : "Missing"}
                                   </Badge>
+                                </td>
+                                <td className="px-3 py-2.5 text-right">
+                                  {isAdminRole ? (
+                                    <span className="text-xs text-muted-foreground italic">Full access</span>
+                                  ) : (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => openRoleEditor(code, db?.permissions ?? code.permissions)}
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -1923,6 +2004,57 @@ export default function SettingsPage() {
 
         </Tabs>
       </div>
+
+      <Dialog open={!!editingRole} onOpenChange={(o) => !o && setEditingRole(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit permissions — {editingRole?.displayName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              Changes apply to every current {editingRole?.displayName} account. Affected users will need
+              to sign in again to pick up the new permissions.
+            </p>
+            {Array.from(permissionsByGroup.entries()).map(([group, perms]) => (
+              <div key={group} className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {group}
+                </p>
+                <div className="space-y-2">
+                  {perms.map((perm) => (
+                    <label key={perm.key} className="flex items-start gap-3 cursor-pointer">
+                      <Checkbox
+                        checked={editingPermissions.includes(perm.key)}
+                        onCheckedChange={() => togglePermission(perm.key)}
+                      />
+                      <span className="text-sm leading-tight">
+                        <span className="font-medium">{perm.label}</span>
+                        <span className="block text-muted-foreground text-xs mt-0.5">
+                          {perm.description}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingRole(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => updateRolePermissionsMutation.mutate()}
+              disabled={updateRolePermissionsMutation.isPending}
+            >
+              {updateRolePermissionsMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Save permissions
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

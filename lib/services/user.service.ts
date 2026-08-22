@@ -6,6 +6,7 @@ import { getRolePermissions } from "@/lib/services/role.service";
 import { writeAuditLog, type AuditActor } from "@/lib/services/audit.service";
 import type { CreateUserInput, UpdateUserInput } from "@/lib/validations/user.schema";
 import { caseInsensitiveRegex } from "@/lib/utils/escapeRegex";
+import { isKnownPermission } from "@/lib/roles/permissionCatalog";
 
 /** Stable string for a user's `organizationId` ref (ObjectId or populated subdoc). */
 export function userOrganizationIdString(user: { organizationId?: unknown } | null | undefined): string | null {
@@ -109,13 +110,28 @@ export async function updateUser(userId: string, data: UpdateUserInput, actor?: 
   }
 
   const roleChanged = data.role && data.role !== existing.role;
+  let permissionsChanged = false;
+
   if (data.role) {
+    // Role change wins over any submitted custom permissions — resets to the
+    // new role's defaults, matching the users page's "role change resets
+    // permissions" note.
     update.permissions = await getRolePermissions(data.role);
+  } else if (data.permissions) {
+    const unknown = data.permissions.filter((p) => !isKnownPermission(p));
+    if (unknown.length) throw new Error(`Unknown permission(s): ${unknown.join(", ")}`);
+    update.permissions = Array.from(new Set(data.permissions));
+    permissionsChanged = true;
   }
 
+  if (roleChanged || permissionsChanged) {
+    update.$inc = { tokenVersion: 1 };
+  }
+
+  const { $inc, ...setFields } = update;
   const user = await User.findOneAndUpdate(
     { _id: userId, deletedAt: null },
-    { $set: update },
+    $inc ? { $set: setFields, $inc } : { $set: setFields },
     { new: true, runValidators: true }
   )
     .select("-password")
@@ -125,13 +141,15 @@ export async function updateUser(userId: string, data: UpdateUserInput, actor?: 
 
   if (actor) {
     void writeAuditLog({
-      action: roleChanged ? "user.role_changed" : "user.updated",
+      action: roleChanged ? "user.role_changed" : permissionsChanged ? "user.permissions_changed" : "user.updated",
       actor,
       targetId: userId,
       targetType: "User",
       metadata: roleChanged
         ? { fromRole: existing.role, toRole: data.role }
-        : { fields: Object.keys(data) },
+        : permissionsChanged
+          ? { permissions: update.permissions }
+          : { fields: Object.keys(data) },
     });
   }
 

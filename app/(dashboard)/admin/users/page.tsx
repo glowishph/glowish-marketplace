@@ -53,6 +53,14 @@ interface StaffUser {
   isActive: boolean;
   lastLoginAt?: string;
   createdAt: string;
+  permissions?: string[];
+}
+
+interface PermissionDefinition {
+  key: string;
+  label: string;
+  description: string;
+  group: string;
 }
 
 interface Branch {
@@ -78,6 +86,7 @@ interface EditForm {
   organizationId: string;
   phone: string;
   isActive: boolean;
+  permissions: string[];
 }
 
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
@@ -116,6 +125,7 @@ const defaultEdit: EditForm = {
   organizationId: "",
   phone: "",
   isActive: true,
+  permissions: [],
 };
 
 const ORG_ADMIN_ROLE_OPTIONS: { value: UserRole; label: string }[] = [
@@ -155,6 +165,32 @@ export default function UsersPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [originalPermissions, setOriginalPermissions] = useState<string[]>([]);
+  const [originalRole, setOriginalRole] = useState<UserRole | "">("");
+
+  const canManageRoles = session?.user?.role === "ADMIN" || (session?.user?.permissions?.includes("manage:roles") ?? false);
+
+  const { data: permissionCatalog = [] } = useQuery({
+    queryKey: ["permission-catalog"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/roles");
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error ?? "Failed to load permissions");
+      return (json.data?.catalog ?? []) as PermissionDefinition[];
+    },
+    enabled: canManageRoles,
+    staleTime: 5 * 60_000,
+  });
+
+  const permissionsByGroup = useMemo(() => {
+    const groups = new Map<string, PermissionDefinition[]>();
+    for (const p of permissionCatalog) {
+      const list = groups.get(p.group) ?? [];
+      list.push(p);
+      groups.set(p.group, list);
+    }
+    return groups;
+  }, [permissionCatalog]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -230,10 +266,17 @@ export default function UsersPage() {
 
   const updateMutation = useMutation({
     mutationFn: async () => {
+      const permissionsDirty =
+        editForm.role === originalRole &&
+        (editForm.permissions.length !== originalPermissions.length ||
+          editForm.permissions.some((p) => !originalPermissions.includes(p)));
+      const payload: Record<string, unknown> = { ...editForm };
+      if (!permissionsDirty) delete payload.permissions;
+
       const res = await fetch(`/api/users/${editId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
@@ -344,10 +387,22 @@ export default function UsersPage() {
       organizationId: user.organizationId?._id ?? "",
       phone: user.phone ?? "",
       isActive: user.isActive,
+      permissions: user.permissions ?? [],
     });
+    setOriginalPermissions(user.permissions ?? []);
+    setOriginalRole(user.role);
     setFormError("");
     setEditOpen(true);
   }, []);
+
+  function togglePermission(key: string) {
+    setEditForm((f) => ({
+      ...f,
+      permissions: f.permissions.includes(key)
+        ? f.permissions.filter((p) => p !== key)
+        : [...f.permissions, key],
+    }));
+  }
 
   function toggleBranch(branchId: string, form: CreateForm | EditForm, setForm: (f: CreateForm | EditForm) => void) {
     const ids = form.branchIds.includes(branchId)
@@ -872,6 +927,35 @@ export default function UsersPage() {
                 </div>
               )}
             </div>
+            {canManageRoles && permissionCatalog.length > 0 && (
+              <div className="space-y-3 border-t pt-4">
+                <div>
+                  <Label>Custom permissions</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Overrides this user&apos;s permissions independently of their role. Changing the role
+                    above resets these to the new role&apos;s defaults instead.
+                  </p>
+                </div>
+                <div className="max-h-56 overflow-y-auto space-y-3 pr-1">
+                  {Array.from(permissionsByGroup.entries()).map(([group, perms]) => (
+                    <div key={group} className="space-y-1.5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {group}
+                      </p>
+                      {perms.map((perm) => (
+                        <label key={perm.key} className="flex items-start gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={editForm.permissions.includes(perm.key)}
+                            onCheckedChange={() => togglePermission(perm.key)}
+                          />
+                          <span className="text-sm leading-tight">{perm.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {editId && (
               <RoleGuard allowedRoles={["ADMIN"]}>
                 <AuditTrail targetId={editId} className="border-t pt-4" />

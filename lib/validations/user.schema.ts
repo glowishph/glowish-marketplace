@@ -30,6 +30,7 @@ export const updateUserSchema = z.object({
   organizationId: organizationIdField,
   phone: z.string().optional(),
   isActive: z.boolean().optional(),
+  permissions: z.array(z.string()).optional(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;

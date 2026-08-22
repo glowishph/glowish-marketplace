@@ -3,7 +3,7 @@ import "server-only";
 import { encode } from "next-auth/jwt";
 import { connectDB } from "@/lib/db/connect";
 import { User } from "@/lib/db/models/User";
-import { effectivePermissions } from "@/lib/permissions";
+import { getRolePermissions } from "@/lib/services/role.service";
 import type { UserRole } from "@/types";
 
 const IMPERSONATION_MAX_AGE_SECONDS = 60 * 60; // 1 hour
@@ -26,7 +26,7 @@ export async function loadUserClaims(userId: string) {
     role,
     branchIds: (user.branchIds as Array<{ toString(): string }> ?? []).map((b) => b.toString()),
     organizationId: user.organizationId?.toString() ?? null,
-    permissions: effectivePermissions({ role, permissions: user.permissions }),
+    permissions: user.permissions?.length ? user.permissions : await getRolePermissions(role),
     tokenVersion: user.tokenVersion ?? 0,
     isActive: user.isActive,
   };

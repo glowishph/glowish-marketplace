@@ -61,16 +61,23 @@ export function effectivePermissions(user: PermissionSubject): string[] {
   return Array.from(new Set([...roleDefaults, ...extra]));
 }
 
+/**
+ * Checks a user's already-resolved `permissions` array directly (no re-merge with
+ * {@link DEFAULT_ROLE_PERMISSIONS}). That array is the authoritative, DB-derived
+ * effective set computed at login/impersonation time — re-merging it with the code
+ * defaults here would silently resurrect any permission an admin removed from a
+ * role via the Roles & Permissions editor.
+ */
 export function hasPermission(user: PermissionSubject, ...required: string[]): boolean {
   if (isPlatformAdmin(user.role)) return true;
   if (!required.length) return true;
-  const effective = effectivePermissions(user);
+  const effective = user.permissions ?? [];
   return required.every((p) => effective.includes(p));
 }
 
 export function hasAnyPermission(user: PermissionSubject, ...anyOf: string[]): boolean {
   if (isPlatformAdmin(user.role)) return true;
   if (!anyOf.length) return true;
-  const effective = effectivePermissions(user);
+  const effective = user.permissions ?? [];
   return anyOf.some((p) => effective.includes(p));
 }

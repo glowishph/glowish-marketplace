@@ -2,7 +2,9 @@ import { connectDB } from "@/lib/db/connect";
 import { Role } from "@/lib/db/models/Role";
 import { User } from "@/lib/db/models/User";
 import { getSystemRolePermissions } from "@/lib/roles/rolePermissions";
-import { SYSTEM_ROLE_DEFINITIONS } from "@/lib/roles/systemRoles";
+import { SYSTEM_ROLE_DEFINITIONS, SYSTEM_ROLE_DISPLAY_NAMES } from "@/lib/roles/systemRoles";
+import { PERMISSION_KEYS } from "@/lib/roles/permissionCatalog";
+import { writeAuditLog, type AuditActor } from "@/lib/services/audit.service";
 import type { UserRole } from "@/types";
 
 export { getSystemRolePermissions } from "@/lib/roles/rolePermissions";
@@ -81,4 +83,59 @@ export async function syncRolesAndPermissions(
     usersUpdated,
     roleNames: SYSTEM_ROLE_DEFINITIONS.map((r) => r.name),
   };
+}
+
+export interface UpdateRolePermissionsResult {
+  role: UserRole;
+  permissions: string[];
+  usersUpdated: number;
+}
+
+/**
+ * Sets a role's permission list, propagates it onto every current member of
+ * that role, and invalidates their sessions (tokenVersion bump) so the change
+ * takes effect on their next request instead of silently waiting for re-login.
+ */
+export async function updateRolePermissions(
+  role: UserRole,
+  permissions: string[],
+  actor: AuditActor
+): Promise<UpdateRolePermissionsResult> {
+  await connectDB();
+
+  const unknown = permissions.filter((p) => !PERMISSION_KEYS.includes(p));
+  if (unknown.length) {
+    throw new Error(`Unknown permission(s): ${unknown.join(", ")}`);
+  }
+
+  const previous = await getRolePermissions(role);
+  const deduped = Array.from(new Set(permissions));
+
+  await Role.findOneAndUpdate(
+    { name: role },
+    {
+      $set: {
+        displayName: SYSTEM_ROLE_DISPLAY_NAMES[role],
+        permissions: deduped,
+        isSystem: true,
+        deletedAt: null,
+      },
+    },
+    { upsert: true }
+  );
+
+  const result = await User.updateMany(
+    { role, deletedAt: null },
+    { $set: { permissions: deduped }, $inc: { tokenVersion: 1 } }
+  );
+
+  void writeAuditLog({
+    action: "role.permissions_updated",
+    actor,
+    targetType: "Role",
+    targetId: role,
+    metadata: { role, previousPermissions: previous, permissions: deduped },
+  });
+
+  return { role, permissions: deduped, usersUpdated: result.modifiedCount };
 }

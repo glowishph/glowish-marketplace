@@ -26,10 +26,24 @@ describe("permissions", () => {
     expect(perms).toContain("manage:orders");
   });
 
-  it("hasAnyPermission requires one match", () => {
+  // hasPermission/hasAnyPermission trust the passed `permissions` array as already
+  // effective (it's the DB-resolved set from session/token, not raw extras) — they
+  // no longer re-merge with the hardcoded role defaults, so a role edit that removes
+  // a default permission actually takes effect instead of being silently restored.
+  it("hasAnyPermission requires one match against the already-resolved set", () => {
     expect(
-      hasAnyPermission({ role: "INVENTORY_MANAGER", permissions: [] }, "manage:products", "use:pos")
+      hasAnyPermission(
+        { role: "INVENTORY_MANAGER", permissions: ["manage:products", "manage:inventory"] },
+        "manage:products",
+        "use:pos"
+      )
     ).toBe(true);
     expect(hasAnyPermission({ role: "CUSTOMER", permissions: [] }, "use:pos")).toBe(false);
+  });
+
+  it("hasPermission does not resurrect a permission removed from the resolved set", () => {
+    expect(
+      hasPermission({ role: "STAFF", permissions: ["manage:members"] }, "use:pos")
+    ).toBe(false);
   });
 });

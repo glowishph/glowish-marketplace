@@ -8,7 +8,6 @@ class AccountLockedSignInError extends CredentialsSignin {
   code = "AccountLocked";
 }
 import { loadOrganizationCapabilities } from "@/lib/organization/capabilities";
-import { effectivePermissions } from "@/lib/permissions";
 import type { UserRole } from "@/types";
 
 declare module "next-auth" {
@@ -187,10 +186,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           session.user.organizationCapabilities = null;
           session.user.organizationType = null;
         }
-        session.user.permissions = effectivePermissions({
-          role,
-          permissions: (token.permissions as string[]) ?? [],
-        });
+        // token.permissions was already fully resolved (DB role defaults ∪ per-user
+        // extras) when the token was minted — re-merging with the code defaults here
+        // would resurrect anything an admin has since removed via the role editor.
+        session.user.permissions = (token.permissions as string[]) ?? [];
         session.user.impersonatorId = (token.impersonatorId as string | null) ?? null;
       }
       return session;

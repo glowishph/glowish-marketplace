@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/db/connect";
 import { User } from "@/lib/db/models/User";
 import { loadOrganizationCapabilities } from "@/lib/organization/capabilities";
-import { effectivePermissions } from "@/lib/permissions";
+import { getRolePermissions } from "@/lib/services/role.service";
 import { captureSecurityEvent } from "@/lib/services/security.service";
 import { verifyTotpToken } from "@/lib/services/totp.service";
 import type { OrganizationType, UserRole } from "@/types";
@@ -103,7 +103,10 @@ export async function verifyCredentials(
   );
 
   const role = user.role as UserRole;
-  const permissions = effectivePermissions({ role, permissions: user.permissions });
+  // user.permissions is kept authoritative by createUser/updateUser and the role
+  // editor (both write the DB Role doc's permissions onto the user record). Only
+  // fall back to role defaults for legacy users whose permissions were never set.
+  const permissions = user.permissions?.length ? user.permissions : await getRolePermissions(role);
   const organizationId = user.organizationId?.toString() ?? null;
 
   let organizationType: OrganizationType | null = null;
