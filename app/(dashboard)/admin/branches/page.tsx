@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Plus, Pencil, Trash2, Loader2, Building2, MapPin, Users, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useConfirm } from "@/components/providers/confirm-provider";
@@ -82,6 +83,7 @@ const defaultForm: BranchForm = {
 async function fetchBranches(page: number): Promise<{ branches: Branch[]; total: number; limit: number }> {
   const res = await fetch(`/api/branches?page=${page}`);
   const data = await res.json();
+  if (!data.success) throw new Error(data.error ?? `Failed to load branches (${res.status})`);
   return {
     branches: data.data ?? [],
     total: data.meta?.total ?? (data.data ?? []).length,
@@ -164,7 +166,7 @@ export default function BranchesPage() {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [page, setPage] = useState(1);
 
-  const { data: branchesResult, isLoading } = useQuery({
+  const { data: branchesResult, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["branches", page],
     queryFn: () => fetchBranches(page),
   });
@@ -350,6 +352,9 @@ export default function BranchesPage() {
     <div className="flex flex-col">
       <Header title="Branches" subtitle="Manage your organization branches" />
       <div className="flex-1 p-6 space-y-4">
+        {isError && (
+          <ErrorState error={error} fallback="Unable to load branches." onRetry={() => refetch()} />
+        )}
         <div className="flex justify-between items-center">
           <p className="text-sm text-muted-foreground">
             {branchesTotal === 1 ? "1 branch" : `${branchesTotal} branches`}

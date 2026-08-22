@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ErrorState } from "@/components/shared/ErrorState";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -164,7 +165,7 @@ export default function UsersPage() {
     setPage(1);
   }, [debouncedSearch, roleFilter]);
 
-  const { data: usersResult, isLoading, isError, error } = useQuery({
+  const { data: usersResult, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["users", debouncedSearch, roleFilter, page],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -572,11 +573,7 @@ export default function UsersPage() {
       />
       <div className="flex-1 p-6 space-y-4">
         {isError && (
-          <Alert variant="destructive">
-            <AlertDescription>
-              {error instanceof Error ? error.message : "Unable to load users."}
-            </AlertDescription>
-          </Alert>
+          <ErrorState error={error} fallback="Unable to load users." onRetry={() => refetch()} />
         )}
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row gap-3 justify-between">
