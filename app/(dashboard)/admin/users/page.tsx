@@ -153,18 +153,24 @@ export default function UsersPage() {
   const [formError, setFormError] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
     return () => clearTimeout(t);
   }, [search]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, roleFilter]);
+
   const { data: usersResult, isLoading, isError, error } = useQuery({
-    queryKey: ["users", debouncedSearch, roleFilter],
+    queryKey: ["users", debouncedSearch, roleFilter, page],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (debouncedSearch) params.set("search", debouncedSearch);
       if (roleFilter && roleFilter !== "all") params.set("role", roleFilter);
+      params.set("page", String(page));
       const res = await fetch(`/api/users?${params}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error ?? `Failed to load users (${res.status})`);
@@ -351,6 +357,8 @@ export default function UsersPage() {
 
   const users = usersResult?.data ?? [];
   const usersTotal = usersResult?.meta?.total ?? users.length;
+  const usersLimit = usersResult?.meta?.limit ?? 20;
+  const usersTotalPages = Math.max(1, Math.ceil(usersTotal / usersLimit));
 
   const deleteUser = useCallback(
     async (user: StaffUser) => {
@@ -607,7 +615,7 @@ export default function UsersPage() {
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             {usersTotal === 1 ? "1 user" : `${usersTotal} users`}
-            {usersTotal > users.length ? ` — showing ${users.length} on this page` : null}
+            {usersTotalPages > 1 ? ` — page ${page} of ${usersTotalPages}` : null}
           </p>
           {selectedIds.length > 0 && (
             <RoleGuard requiredPermissions={["manage:users"]}>
@@ -637,6 +645,9 @@ export default function UsersPage() {
           loading={isLoading}
           keyExtractor={(u) => u._id}
           emptyMessage="No users found."
+          page={page}
+          totalPages={usersTotalPages}
+          onPageChange={setPage}
         />
       </div>
 

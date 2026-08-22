@@ -79,10 +79,14 @@ const defaultForm: BranchForm = {
   organizationId: "",
 };
 
-async function fetchBranches(): Promise<Branch[]> {
-  const res = await fetch("/api/branches");
+async function fetchBranches(page: number): Promise<{ branches: Branch[]; total: number; limit: number }> {
+  const res = await fetch(`/api/branches?page=${page}`);
   const data = await res.json();
-  return data.data ?? [];
+  return {
+    branches: data.data ?? [],
+    total: data.meta?.total ?? (data.data ?? []).length,
+    limit: data.meta?.limit ?? 20,
+  };
 }
 
 async function fetchOrganizations(): Promise<Organization[]> {
@@ -158,11 +162,15 @@ export default function BranchesPage() {
 
   const [usersDialogBranch, setUsersDialogBranch] = useState<Branch | null>(null);
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [page, setPage] = useState(1);
 
-  const { data: branches = [], isLoading } = useQuery({
-    queryKey: ["branches"],
-    queryFn: fetchBranches,
+  const { data: branchesResult, isLoading } = useQuery({
+    queryKey: ["branches", page],
+    queryFn: () => fetchBranches(page),
   });
+  const branches = branchesResult?.branches ?? [];
+  const branchesTotal = branchesResult?.total ?? branches.length;
+  const branchesTotalPages = Math.max(1, Math.ceil(branchesTotal / (branchesResult?.limit ?? 20)));
 
   const { data: organizations = [] } = useQuery({
     queryKey: ["organizations"],
@@ -343,7 +351,10 @@ export default function BranchesPage() {
       <Header title="Branches" subtitle="Manage your organization branches" />
       <div className="flex-1 p-6 space-y-4">
         <div className="flex justify-between items-center">
-          <p className="text-sm text-muted-foreground">{branches.length} branches</p>
+          <p className="text-sm text-muted-foreground">
+            {branchesTotal === 1 ? "1 branch" : `${branchesTotal} branches`}
+            {branchesTotalPages > 1 ? ` — page ${page} of ${branchesTotalPages}` : null}
+          </p>
           <RoleGuard requiredPermissions={["manage:branches"]}>
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4 mr-2" />
@@ -358,6 +369,9 @@ export default function BranchesPage() {
           loading={isLoading}
           keyExtractor={(b) => b._id}
           emptyMessage="No branches found. Add your first branch."
+          page={page}
+          totalPages={branchesTotalPages}
+          onPageChange={setPage}
         />
       </div>
 
