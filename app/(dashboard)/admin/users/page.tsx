@@ -34,7 +34,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, Search, UserCheck, UserX } from "lucide-react";
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, Search, UserCheck, UserX, UserCog } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useConfirm } from "@/components/providers/confirm-provider";
 
@@ -300,6 +300,34 @@ export default function UsersPage() {
     onError: (err: Error) => toast({ title: err.message, variant: "destructive" }),
   });
 
+  const impersonateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch("/api/admin/impersonate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId: id }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      return data.data as { redirectTo: string };
+    },
+    onSuccess: (data) => {
+      window.location.href = data.redirectTo || "/";
+    },
+    onError: (err: Error) => toast({ title: err.message, variant: "destructive" }),
+  });
+
+  const impersonateUser = useCallback(
+    async (user: StaffUser) => {
+      const ok = await confirm({
+        title: `View as "${user.name}"?`,
+        description: "You'll be signed in as this user until you return to your admin session.",
+      });
+      if (ok) impersonateMutation.mutate(user._id);
+    },
+    [confirm, impersonateMutation]
+  );
+
   const openEdit = useCallback((user: StaffUser) => {
     setEditId(user._id);
     setEditForm({
@@ -457,6 +485,7 @@ export default function UsersPage() {
       render: (u: StaffUser) => {
         const isSelf = u._id === currentUserId;
         const isOwner = u.role === "ADMIN";
+        const canImpersonate = session?.user?.role === "ADMIN" && !isSelf && u.isActive;
 
         if (isOwner) {
           return (
@@ -477,6 +506,12 @@ export default function UsersPage() {
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit
                 </DropdownMenuItem>
+                {canImpersonate && (
+                  <DropdownMenuItem onClick={() => impersonateUser(u)}>
+                    <UserCog className="h-4 w-4 mr-2" />
+                    View as this user
+                  </DropdownMenuItem>
+                )}
                 {!isSelf && (
                   <DropdownMenuItem
                     onClick={() => toggleActiveUser(u)}
@@ -508,8 +543,10 @@ export default function UsersPage() {
     },
   ], [
     currentUserId,
+    session?.user?.role,
     deleteUser,
     toggleActiveUser,
+    impersonateUser,
     openEdit,
     allSelectableSelected,
     selectableUsers,

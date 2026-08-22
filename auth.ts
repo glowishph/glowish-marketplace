@@ -39,6 +39,7 @@ declare module "next-auth" {
       } | null;
       permissions: string[];
       image?: string;
+      impersonatorId?: string | null;
     };
   }
 }
@@ -56,6 +57,7 @@ declare module "next-auth/jwt" {
     permissions?: string[];
     tokenVersion?: number;
     invalidated?: boolean;
+    impersonatorId?: string | null;
   }
 }
 
@@ -189,6 +191,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role,
           permissions: (token.permissions as string[]) ?? [],
         });
+        session.user.impersonatorId = (token.impersonatorId as string | null) ?? null;
       }
       return session;
     },

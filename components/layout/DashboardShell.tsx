@@ -9,15 +9,17 @@ import type { SidebarUser } from "@/components/layout/Sidebar";
 import { TenantProvider } from "@/components/providers/TenantProvider";
 import type { PublicAppSettings } from "@/lib/types/appSettings";
 import { AppBrand } from "@/components/branding/AppBrand";
+import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
 import { cn } from "@/lib/utils";
 
 interface DashboardShellProps {
   initialUser: SidebarUser;
   tenantSettings: PublicAppSettings;
+  impersonatedName?: string | null;
   children: React.ReactNode;
 }
 
-export function DashboardShell({ initialUser, tenantSettings, children }: DashboardShellProps) {
+export function DashboardShell({ initialUser, tenantSettings, impersonatedName, children }: DashboardShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -92,6 +94,7 @@ export function DashboardShell({ initialUser, tenantSettings, children }: Dashbo
       />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden pt-20 md:pt-0">
+        {impersonatedName && <ImpersonationBanner impersonatedName={impersonatedName} />}
         <div className="hidden shrink-0 items-center justify-end border-b bg-muted/25 px-4 py-2 md:flex">
           <Button variant="outline" size="sm" className="gap-2" asChild>
             <Link href="/">

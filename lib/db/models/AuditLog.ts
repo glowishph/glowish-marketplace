@@ -51,6 +51,8 @@ export type AuditAction =
   | "user.2fa_disabled"
   | "user.password_changed"
   | "user.account_deleted"
+  | "user.impersonation_started"
+  | "user.impersonation_ended"
   | "review.created"
   | "review.deleted"
   | "review.featured_changed"

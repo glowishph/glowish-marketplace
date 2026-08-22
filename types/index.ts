@@ -86,6 +86,7 @@ export interface SessionUser {
   organizationCapabilities?: OrganizationCapabilities | null;
   permissions: string[];
   image?: string;
+  impersonatorId?: string | null;
 }
 
 // ─── Shared Base ─────────────────────────────────────────────────────────────

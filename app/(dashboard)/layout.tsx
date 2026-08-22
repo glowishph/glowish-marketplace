@@ -74,7 +74,11 @@ export default async function DashboardLayout({ children }: Props) {
   }
 
   return (
-    <DashboardShell initialUser={sidebarUser} tenantSettings={tenantSettings}>
+    <DashboardShell
+      initialUser={sidebarUser}
+      tenantSettings={tenantSettings}
+      impersonatedName={session.user.impersonatorId ? session.user.name : null}
+    >
       {children}
     </DashboardShell>
   );
