@@ -135,19 +135,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       } else if (token.sub) {
         // Re-check on every request: a password change bumps tokenVersion in the
         // DB, which invalidates every JWT issued before the change ("logout on
-        // all devices").
-        const fresh = await getUserById(token.sub);
-        if (!fresh || fresh.tokenVersion !== token.tokenVersion) {
-          token.invalidated = true;
-          return token;
-        }
-        if (!token.role) {
-          // Stale token missing fields — re-hydrate from DB
-          token.name = fresh.name;
-          token.email = fresh.email;
-          token.role = fresh.role;
-          token.branchIds = fresh.branchIds ?? [];
-          token.permissions = fresh.permissions ?? [];
+        // all devices"). A transient DB error here must not crash auth for every
+        // request — fail open and keep the existing token instead.
+        try {
+          const fresh = await getUserById(token.sub);
+          if (!fresh || fresh.tokenVersion !== token.tokenVersion) {
+            token.invalidated = true;
+            return token;
+          }
+          if (!token.role) {
+            // Stale token missing fields — re-hydrate from DB
+            token.name = fresh.name;
+            token.email = fresh.email;
+            token.role = fresh.role;
+            token.branchIds = fresh.branchIds ?? [];
+            token.permissions = fresh.permissions ?? [];
+          }
+        } catch (err) {
+          console.error("[auth] jwt callback: tokenVersion re-check failed", err);
         }
       }
       return token;

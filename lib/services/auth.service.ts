@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db/connect";
 import { User } from "@/lib/db/models/User";
 import { loadOrganizationCapabilities } from "@/lib/organization/capabilities";
@@ -141,6 +142,7 @@ export async function verifyCredentials(
 }
 
 export async function getUserById(userId: string) {
+  if (!mongoose.isValidObjectId(userId)) return null;
   await connectDB();
   const user = await User.findOne({ _id: userId, deletedAt: null }).lean();
   if (!user) return null;
