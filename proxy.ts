@@ -165,11 +165,11 @@ async function routeProxy(req: NextRequest, requestId: string): Promise<NextResp
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  if (!session && matchesPrefixList(pathname, UNAUTHENTICATED)) {
+  if (!session?.user && matchesPrefixList(pathname, UNAUTHENTICATED)) {
     return NextResponse.next();
   }
 
-  if (!session) {
+  if (!session?.user) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
