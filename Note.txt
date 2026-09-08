@@ -1,0 +1,7 @@
+mongodb = 27usd | 4520
+vercel  = 20usd | 1254
+
+Glowish
+
+support_db_user
+fwfS5YyaVt9MPPA3
