@@ -55,7 +55,7 @@
     "mongoose": "^9.4.1",
     "nanoid": "^5.1.9",
     "next": "16.2.6",
-    "next-auth": "^5.0.0-beta.31",
+    "next-auth": "^5.0.0-beta.32",
     "nodemailer": "^7.0.13",
     "otplib": "^13.4.0",
     "pdfkit": "^0.18.0",
