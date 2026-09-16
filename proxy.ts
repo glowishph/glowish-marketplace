@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { Session } from "next-auth";
-import { isMaintenanceMode } from "@/lib/utils/maintenance";
+import { getMaintenanceMode } from "@/lib/utils/maintenance";
 import { resolveSetupRequiredForProxy } from "@/lib/utils/setupRequiredCache";
 import { isCustomerOrPublicApi, isStaffBlockedRole } from "@/lib/utils/apiAccess";
 import { getStaffHomePath, resolveStaffRedirectPath } from "@/lib/navigation/staffHome";
@@ -92,7 +92,7 @@ async function routeProxy(req: NextRequest, requestId: string): Promise<NextResp
     return NextResponse.next();
   }
 
-  const maintenanceActive = isMaintenanceMode();
+  const maintenanceActive = await getMaintenanceMode();
 
   const isMaintenancePublic = matchesPrefixList(pathname, MAINTENANCE_PUBLIC);
 
