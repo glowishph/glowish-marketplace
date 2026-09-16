@@ -9,13 +9,6 @@ export function isMaintenanceMode(): boolean {
   return process.env.MAINTENANCE_MODE === "true";
 }
 
-export function isMaintenanceModeAdmin(): boolean {
-  return false;
-}
-
-// Empty array means all roles are blocked during maintenance
-export const MAINTENANCE_BYPASS_ROLES: string[] = [];
-
 const CACHE_TTL_MS = 10_000;
 
 let cache: { value: boolean; at: number } | null = null;
@@ -54,6 +47,6 @@ export async function getMaintenanceMode(): Promise<boolean> {
 
 export async function setMaintenanceMode(enabled: boolean): Promise<void> {
   await connectDB();
-  await AppSettings.updateOne({}, { $set: { maintenanceMode: enabled } });
+  await AppSettings.updateOne({}, { $set: { maintenanceMode: enabled } }, { upsert: true });
   cache = { value: enabled, at: Date.now() };
 }

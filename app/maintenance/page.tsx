@@ -3,6 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import type { Session } from "next-auth";
 import { auth } from "@/auth";
 import logger from "@/lib/logger";
+import { DisableMaintenanceButton } from "@/components/maintenance/DisableMaintenanceButton";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,8 @@ export default async function MaintenancePage() {
         </h1>
 
         <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-          We&apos;re currently performing system maintenance. All users are temporarily locked out.
+          We&apos;re currently performing system maintenance. Staff access is temporarily
+          disabled while we work.
         </p>
 
         <div className="space-y-4 mb-8">
@@ -43,10 +45,16 @@ export default async function MaintenancePage() {
           </p>
           {session?.user && (
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              You have been logged out. Please try again after maintenance is complete.
+              Please try again after maintenance is complete.
             </p>
           )}
         </div>
+
+        {session?.user?.role === "ADMIN" && (
+          <div className="flex justify-center mb-8">
+            <DisableMaintenanceButton />
+          </div>
+        )}
 
         <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
           <p className="text-xs text-slate-500 dark:text-slate-400">

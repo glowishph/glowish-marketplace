@@ -991,8 +991,8 @@ export default function SettingsPage() {
                     Maintenance mode
                   </CardTitle>
                   <CardDescription>
-                    When enabled, all users are redirected to the maintenance page. Admins cannot
-                    bypass this — disable it here when done.
+                    When enabled, staff are redirected to the maintenance page (the storefront
+                    stays online). You can disable it there as an admin, or here.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1026,7 +1026,7 @@ export default function SettingsPage() {
                               const ok = await confirm({
                                 title: "Enable maintenance mode?",
                                 description:
-                                  "All users (including you) will be redirected to the maintenance page. You can disable it here.",
+                                  "Staff (including you) will be redirected to the maintenance page; the storefront stays online. You'll be able to disable it from there or here.",
                                 variant: "destructive",
                                 confirmText: "Enable",
                               });

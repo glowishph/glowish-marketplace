@@ -15,6 +15,7 @@ const MAINTENANCE_PUBLIC = [
   "/maintenance",
   "/api/setup",
   "/api/auth",
+  "/api/maintenance",
   "/",
   "/shop",
   "/categories",
